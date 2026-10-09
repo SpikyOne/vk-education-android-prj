@@ -1,4 +1,4 @@
-package ru.grigorev.vkeducationtestprj
+package ru.grigorev.vkeducationprj
 
 import org.junit.Test
 

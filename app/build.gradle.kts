@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "ru.grigorev.vkeducationtestprj"
+    namespace = "ru.grigorev.vkeducationprj"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "ru.grigorev.vkeducationtestprj"
+        applicationId = "ru.grigorev.vkeducationprj"
         minSdk = 24
         targetSdk = 37
         versionCode = 1

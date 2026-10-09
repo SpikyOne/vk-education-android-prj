@@ -1,4 +1,4 @@
-package ru.grigorev.vkeducationtestprj.ui.theme
+package ru.grigorev.vkeducationprj.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
