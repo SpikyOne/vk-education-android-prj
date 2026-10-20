@@ -5,7 +5,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +21,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -53,12 +59,17 @@ fun AppListScreen() {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Список приложений") },
+                title = {
+                    Text(
+                        text = "Список приложений",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_launcher_foreground),
                         contentDescription = "App Icon",
-                        modifier = Modifier.size(40.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -72,7 +83,9 @@ fun AppListScreen() {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues)
+                .padding(paddingValues),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(sampleAppList) { app ->
                 AppListItem(app = app)
@@ -83,46 +96,60 @@ fun AppListScreen() {
 
 @Composable
 fun AppListItem(app: AppInfo) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Image(
-            painter = painterResource(id = app.iconRes),
-            contentDescription = app.name,
+        Row(
             modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(12.dp))
-        )
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = app.iconRes),
+                    contentDescription = app.name,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
 
-        Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = app.name,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = app.name,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
 
-            Text(
-                text = app.category,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Medium
-            )
+                Spacer(modifier = Modifier.height(2.dp))
 
-            Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = app.category,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
 
-            Text(
-                text = app.description,
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = app.description,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
