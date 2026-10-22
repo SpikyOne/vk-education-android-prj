@@ -1,10 +1,6 @@
 package ru.grigorev.vkeducationprj
 
-
 import androidx.annotation.DrawableRes
-
-
-
 
 data class AppInfo(
     val id: Int,
@@ -14,47 +10,14 @@ data class AppInfo(
     @param:DrawableRes val iconRes: Int
 )
 
-// Захардкоженный список приложений для демонстрации
 val sampleAppList = listOf(
-
-    AppInfo(
-        id = 1,
-        name = "ВКонтакте",
-        category = "Социальные сети",
-        description = "Общение, музыка, видео и сервисы на каждый день",
-        iconRes = R.drawable.ic_launcher_foreground
-    ),
-
-    AppInfo(
-        id = 2,
-        name = "VK Видео",
-        category = "Развлечения",
-        description = "Тысячи фильмов, сериалов и эксклюзивных шоу",
-        iconRes = R.drawable.ic_launcher_foreground
-    ),
-
-    AppInfo(
-        id = 3,
-        name = "RuStore",
-        category = "Инструменты",
-        description = "Официальный российский магазин приложений для Android",
-        iconRes = R.drawable.ic_launcher_foreground
-    ),
-
-    AppInfo(
-        id = 4,
-        name = "VK Музыка",
-        category = "Музыка и аудио",
-        description = "Миллионы треков, подкасты и радио без ограничений",
-        iconRes = R.drawable.ic_launcher_foreground
-    ),
-
-    AppInfo(
-        id = 5,
-        name = "Почта Mail.ru",
-        category = "Продуктивность",
-        description = "Быстрый и надежный почтовый клиент для работы и учебы",
-        iconRes = R.drawable.ic_launcher_foreground
-    )
-
+    AppInfo(1, "ВКонтакте", "Социальные сети", "Общение, музыка, видео и сервисы", R.drawable.ic_launcher_foreground),
+    AppInfo(2, "VK Видео", "Развлечения", "Тысячи фильмов, сериалов и шоу", R.drawable.ic_launcher_foreground),
+    AppInfo(3, "RuStore", "Инструменты", "Официальный российский магазин приложений", R.drawable.ic_launcher_foreground),
+    AppInfo(4, "VK Музыка", "Музыка и аудио", "Миллионы треков и подкастов", R.drawable.ic_launcher_foreground),
+    AppInfo(5, "Почта Mail.ru", "Продуктивность", "Быстрый почтовый клиент", R.drawable.ic_launcher_foreground),
+    AppInfo(6, "Одноклассники", "Социальные сети", "Социальная сеть для общения с близкими", R.drawable.ic_launcher_foreground),
+    AppInfo(7, "VK Клипы", "Развлечения", "Короткие вертикальные видео", R.drawable.ic_launcher_foreground),
+    AppInfo(8, "Дзен", "Новости", "Статьи, видео и новости по интересам", R.drawable.ic_launcher_foreground),
+    AppInfo(9, "Маруся", "Инструменты", "Голосовой помощник от VK", R.drawable.ic_launcher_foreground)
 )
