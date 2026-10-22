@@ -84,7 +84,9 @@ fun AppNavigation() {
 
         composable("app_list") {
             AppListScreen(onAppClick = { appId ->
-                navController.navigate("app_details/$appId")
+                navController.navigate("app_details/$appId") {
+                    launchSingleTop = true
+                }
             })
         }
 
@@ -99,8 +101,15 @@ fun AppNavigation() {
                 app = app,
                 onBackClick = { navController.popBackStack() },
                 onSimilarAppClick = { newAppId ->
-                    navController.navigate("app_details/$newAppId")
+                    navController.navigate("app_details/$newAppId") {
+                        navController.currentBackStackEntry?.destination?.route?.let { currentRoute ->
+                            popUpTo(currentRoute) {
+                                inclusive = true
+                            }
+                        }
+                    }
                 }
+
             )
         }
 
@@ -261,15 +270,15 @@ fun ShowcaseBlock(onAppClick: (Int) -> Unit) {
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppListItem(app: AppInfo, onClick: () -> Unit = {}) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
