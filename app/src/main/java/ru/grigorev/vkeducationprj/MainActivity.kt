@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -36,10 +37,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,41 +60,34 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.lifecycle.viewmodel.compose.viewModel
 import ru.grigorev.vkeducationprj.ui.theme.VKEducationPrjTheme
 
-
-
-
 class MainActivity : ComponentActivity() {
-
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
         setContent {
             VKEducationPrjTheme {
                 AppNavigation()
             }
         }
-
     }
-
 }
-
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
 
     NavHost(navController = navController, startDestination = "app_list") {
-
         composable("app_list") {
-            AppListScreen(onAppClick = { appId ->
-                navController.navigate("app_details/$appId") {
-                    launchSingleTop = true
+            AppListScreen(
+                onAppClick = { appId ->
+                    navController.navigate("app_details/$appId") {
+                        launchSingleTop = true
+                    }
                 }
-            })
+            )
         }
 
         composable(
@@ -109,28 +109,55 @@ fun AppNavigation() {
                         }
                     }
                 }
-
             )
         }
-
     }
-
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppListScreen(onAppClick: (Int) -> Unit) {
+fun AppListScreen(
+    onAppClick: (Int) -> Unit,
+    viewModel: AppListViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    if (uiState.showSnackbar) {
+        LaunchedEffect(uiState.showSnackbar) {
+            snackbarHostState.showSnackbar(uiState.snackbarMessage)
+            viewModel.onSnackbarShown()
+        }
+    }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
-                title = { Text("Список приложений", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        text = "Список приложений",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { viewModel.onToolbarClick() }
+                    )
+                },
                 navigationIcon = {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_launcher_foreground),
                         contentDescription = "App Icon",
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clickable { viewModel.onToolbarClick() }
                     )
+                },
+                actions = {
+                    IconButton(onClick = { viewModel.onToolbarClick() }) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Info",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -147,13 +174,12 @@ fun AppListScreen(onAppClick: (Int) -> Unit) {
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(sampleAppList) { app ->
+            items(uiState.apps) { app ->
                 AppListItem(app = app, onClick = { onAppClick(app.id) })
             }
         }
     }
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -189,7 +215,6 @@ fun AppDetailsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
-            // Шапка карточки
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -232,11 +257,9 @@ fun AppDetailsScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             ShowcaseBlock(onAppClick = onSimilarAppClick)
-
         }
     }
 }
-
 
 @Composable
 fun ShowcaseBlock(onAppClick: (Int) -> Unit) {
@@ -266,9 +289,7 @@ fun ShowcaseBlock(onAppClick: (Int) -> Unit) {
             }
         }
     }
-
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -327,5 +348,4 @@ fun AppListItem(app: AppInfo, onClick: () -> Unit = {}) {
             }
         }
     }
-
 }
