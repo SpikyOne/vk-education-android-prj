@@ -1,37 +1,43 @@
-package ru.grigorev.vkeducationprj
+package ru.grigorev.vkeducationprj.presentation.list // (или твой пакет presentation)
 
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import ru.grigorev.vkeducationprj.data.repository.AppRepositoryImpl
+import ru.grigorev.vkeducationprj.domain.model.AppDomainModel
+import ru.grigorev.vkeducationprj.domain.repository.AppRepository
 
-
-
-// Состояние экрана (UI State)
 data class AppUiState(
-    val apps: List<AppInfo> = sampleAppList,
+    val apps: List<AppDomainModel> = emptyList(),
     val showSnackbar: Boolean = false,
     val snackbarMessage: String = ""
 )
 
-
-// ViewModel для управления логикой и состоянием
-class AppListViewModel : ViewModel() {
+class AppListViewModel(
+    private val repository: AppRepository = AppRepositoryImpl()
+) : ViewModel() {
     private val _uiState = MutableStateFlow(AppUiState())
     val uiState: StateFlow<AppUiState> = _uiState.asStateFlow()
 
-    // Вызывается при клике по тулбару
+    init {
+        loadApps()
+    }
+
+    private fun loadApps() {
+        _uiState.update { it.copy(apps = repository.getApps()) }
+    }
+
     fun onToolbarClick() {
         _uiState.update {
             it.copy(
                 showSnackbar = true,
-                snackbarMessage = "Привет из ViewModel! Тулбар нажат."
+                snackbarMessage = "Привет из ViewModel через Clean Architecture!"
             )
         }
     }
 
-    // Сбрасывает флаг показа, чтобы при повороте экрана Snackbar не вылезал повторно
     fun onSnackbarShown() {
         _uiState.update {
             it.copy(showSnackbar = false)

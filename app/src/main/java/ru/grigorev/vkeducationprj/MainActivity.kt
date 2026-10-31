@@ -61,23 +61,29 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.lifecycle.viewmodel.compose.viewModel
+import ru.grigorev.vkeducationprj.data.repository.AppRepositoryImpl
+import ru.grigorev.vkeducationprj.domain.model.AppDomainModel
 import ru.grigorev.vkeducationprj.ui.theme.VKEducationPrjTheme
+import ru.grigorev.vkeducationprj.presentation.list.AppListViewModel
 
 class MainActivity : ComponentActivity() {
+    private val repository = AppRepositoryImpl()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             VKEducationPrjTheme {
-                AppNavigation()
+                AppNavigation(repository)
             }
         }
     }
 }
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(repository: AppRepositoryImpl) {
     val navController = rememberNavController()
+    val allApps = remember { repository.getApps() }
 
     NavHost(navController = navController, startDestination = "app_list") {
         composable("app_list") {
@@ -95,10 +101,11 @@ fun AppNavigation() {
             arguments = listOf(navArgument("appId") { type = NavType.IntType })
         ) { backStackEntry ->
             val appId = backStackEntry.arguments?.getInt("appId") ?: 1
-            val app = sampleAppList.find { it.id == appId } ?: sampleAppList.first()
+            val app = allApps.find { it.id == appId } ?: allApps.first()
 
             AppDetailsScreen(
                 app = app,
+                allApps = allApps,
                 onBackClick = { navController.popBackStack() },
                 onSimilarAppClick = { newAppId ->
                     navController.navigate("app_details/$newAppId") {
@@ -184,7 +191,8 @@ fun AppListScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppDetailsScreen(
-    app: AppInfo,
+    app: AppDomainModel,
+    allApps: List<AppDomainModel>,
     onBackClick: () -> Unit,
     onSimilarAppClick: (Int) -> Unit
 ) {
@@ -256,13 +264,13 @@ fun AppDetailsScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            ShowcaseBlock(onAppClick = onSimilarAppClick)
+            ShowcaseBlock(allApps = allApps, onAppClick = onSimilarAppClick)
         }
     }
 }
 
 @Composable
-fun ShowcaseBlock(onAppClick: (Int) -> Unit) {
+fun ShowcaseBlock(allApps: List<AppDomainModel>, onAppClick: (Int) -> Unit) {
     Text(
         text = "Витрина",
         fontSize = 20.sp,
@@ -278,9 +286,9 @@ fun ShowcaseBlock(onAppClick: (Int) -> Unit) {
         modifier = Modifier.fillMaxWidth()
     ) { page ->
         val startIndex = page * 3
-        val pageApps = sampleAppList.subList(
+        val pageApps = allApps.subList(
             startIndex,
-            (startIndex + 3).coerceAtMost(sampleAppList.size)
+            (startIndex + 3).coerceAtMost(allApps.size)
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -293,7 +301,7 @@ fun ShowcaseBlock(onAppClick: (Int) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppListItem(app: AppInfo, onClick: () -> Unit = {}) {
+fun AppListItem(app: AppDomainModel, onClick: () -> Unit = {}) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
