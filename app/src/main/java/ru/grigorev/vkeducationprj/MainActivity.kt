@@ -55,35 +55,35 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import androidx.lifecycle.viewmodel.compose.viewModel
-import ru.grigorev.vkeducationprj.data.repository.AppRepositoryImpl
+import dagger.hilt.android.AndroidEntryPoint
 import ru.grigorev.vkeducationprj.domain.model.AppDomainModel
+import ru.grigorev.vkeducationprj.presentation.AppDetailsViewModel
+import ru.grigorev.vkeducationprj.presentation.AppListViewModel
+import ru.grigorev.vkeducationprj.presentation.AppUiEvent
 import ru.grigorev.vkeducationprj.ui.theme.VKEducationPrjTheme
-import ru.grigorev.vkeducationprj.presentation.list.AppListViewModel
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private val repository = AppRepositoryImpl()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             VKEducationPrjTheme {
-                AppNavigation(repository)
+                AppNavigation()
             }
         }
     }
 }
 
 @Composable
-fun AppNavigation(repository: AppRepositoryImpl) {
+fun AppNavigation() {
     val navController = rememberNavController()
-    val allApps = remember { repository.getApps() }
 
     NavHost(navController = navController, startDestination = "app_list") {
         composable("app_list") {
@@ -99,13 +99,8 @@ fun AppNavigation(repository: AppRepositoryImpl) {
         composable(
             route = "app_details/{appId}",
             arguments = listOf(navArgument("appId") { type = NavType.IntType })
-        ) { backStackEntry ->
-            val appId = backStackEntry.arguments?.getInt("appId") ?: 1
-            val app = allApps.find { it.id == appId } ?: allApps.first()
-
+        ) {
             AppDetailsScreen(
-                app = app,
-                allApps = allApps,
                 onBackClick = { navController.popBackStack() },
                 onSimilarAppClick = { newAppId ->
                     navController.navigate("app_details/$newAppId") {
@@ -125,15 +120,18 @@ fun AppNavigation(repository: AppRepositoryImpl) {
 @Composable
 fun AppListScreen(
     onAppClick: (Int) -> Unit,
-    viewModel: AppListViewModel = viewModel()
+    viewModel: AppListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    if (uiState.showSnackbar) {
-        LaunchedEffect(uiState.showSnackbar) {
-            snackbarHostState.showSnackbar(uiState.snackbarMessage)
-            viewModel.onSnackbarShown()
+    // Одноразовые события (Snackbar): коллекционируем поток один раз.
+    // При повороте экрана событие уже потреблено из Channel — Snackbar не повторится.
+    LaunchedEffect(Unit) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is AppUiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+            }
         }
     }
 
@@ -191,15 +189,14 @@ fun AppListScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppDetailsScreen(
-    app: AppDomainModel,
-    allApps: List<AppDomainModel>,
     onBackClick: () -> Unit,
-    onSimilarAppClick: (Int) -> Unit
+    onSimilarAppClick: (Int) -> Unit,
+    viewModel: AppDetailsViewModel = hiltViewModel()
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(app.name, fontWeight = FontWeight.Bold) },
+                title = { Text(viewModel.app.name, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -232,8 +229,8 @@ fun AppDetailsScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Image(
-                        painter = painterResource(id = app.iconRes),
-                        contentDescription = app.name,
+                        painter = painterResource(id = viewModel.app.iconRes),
+                        contentDescription = viewModel.app.name,
                         modifier = Modifier.size(64.dp)
                     )
                 }
@@ -241,8 +238,8 @@ fun AppDetailsScreen(
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Column {
-                    Text(text = app.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Text(text = app.category, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+                    Text(text = viewModel.app.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(text = viewModel.app.category, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
                 }
             }
 
@@ -260,11 +257,11 @@ fun AppDetailsScreen(
 
             Text(text = "Описание", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(text = app.description, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(text = viewModel.app.description, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            ShowcaseBlock(allApps = allApps, onAppClick = onSimilarAppClick)
+            ShowcaseBlock(allApps = viewModel.showcaseApps, onAppClick = onSimilarAppClick)
         }
     }
 }

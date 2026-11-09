@@ -2,11 +2,17 @@ package ru.grigorev.vkeducationprj.data.repository
 
 import ru.grigorev.vkeducationprj.R
 import ru.grigorev.vkeducationprj.data.model.AppDto
-import ru.grigorev.vkeducationprj.data.model.toDomain
+import ru.grigorev.vkeducationprj.data.model.AppMapper
 import ru.grigorev.vkeducationprj.domain.model.AppDomainModel
 import ru.grigorev.vkeducationprj.domain.repository.AppRepository
+import javax.inject.Inject
 
-class AppRepositoryImpl : AppRepository {
+// Реализация репозитория. ViewModel знает только интерфейс AppRepository,
+// а подставляет эту реализацию Hilt (см. di/AppModule.kt, bindAppRepository).
+class AppRepositoryImpl @Inject constructor(
+    private val mapper: AppMapper
+) : AppRepository {
+
     private val localDtos = listOf(
         AppDto(1, "ВКонтакте", "Социальные сети", "Общение, музыка, видео и сервисы", R.drawable.ic_launcher_foreground),
         AppDto(2, "VK Видео", "Развлечения", "Тысячи фильмов, сериалов и шоу", R.drawable.ic_launcher_foreground),
@@ -20,10 +26,10 @@ class AppRepositoryImpl : AppRepository {
     )
 
     override fun getApps(): List<AppDomainModel> {
-        return localDtos.map { it.toDomain() }
+        return localDtos.map { mapper.map(it) }
     }
 
     override fun getAppById(id: Int): AppDomainModel? {
-        return localDtos.find { it.id == id }?.toDomain()
+        return localDtos.find { it.id == id }?.let { mapper.map(it) }
     }
 }
