@@ -4,7 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -32,6 +31,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,9 +61,12 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import coil.compose.AsyncImage
 import dagger.hilt.android.AndroidEntryPoint
 import ru.grigorev.vkeducationprj.domain.model.AppDomainModel
+import ru.grigorev.vkeducationprj.presentation.AppDetailsUiState
 import ru.grigorev.vkeducationprj.presentation.AppDetailsViewModel
+import ru.grigorev.vkeducationprj.presentation.AppListUiState
 import ru.grigorev.vkeducationprj.presentation.AppListViewModel
 import ru.grigorev.vkeducationprj.presentation.AppUiEvent
 import ru.grigorev.vkeducationprj.ui.theme.VKEducationPrjTheme
@@ -98,7 +101,7 @@ fun AppNavigation() {
 
         composable(
             route = "app_details/{appId}",
-            arguments = listOf(navArgument("appId") { type = NavType.IntType })
+            arguments = listOf(navArgument("appId") { type = NavType.StringType })
         ) {
             AppDetailsScreen(
                 onBackClick = { navController.popBackStack() },
@@ -119,7 +122,7 @@ fun AppNavigation() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppListScreen(
-    onAppClick: (Int) -> Unit,
+    onAppClick: (String) -> Unit,
     viewModel: AppListViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -172,15 +175,51 @@ fun AppListScreen(
             )
         }
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            items(uiState.apps) { app ->
-                AppListItem(app = app, onClick = { onAppClick(app.id) })
+        when (val state = uiState) {
+            is AppListUiState.Loading -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            is AppListUiState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = state.message,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(onClick = { viewModel.loadApps() }) {
+                            Text("Повторить")
+                        }
+                    }
+                }
+            }
+
+            is AppListUiState.Success -> {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(state.apps) { app ->
+                        AppListItem(app = app, onClick = { onAppClick(app.id) })
+                    }
+                }
             }
         }
     }
@@ -190,13 +229,16 @@ fun AppListScreen(
 @Composable
 fun AppDetailsScreen(
     onBackClick: () -> Unit,
-    onSimilarAppClick: (Int) -> Unit,
+    onSimilarAppClick: (String) -> Unit,
     viewModel: AppDetailsViewModel = hiltViewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
+    val title = (uiState as? AppDetailsUiState.Success)?.app?.name.orEmpty()
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(viewModel.app.name, fontWeight = FontWeight.Bold) },
+                title = { Text(title, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(
@@ -213,61 +255,107 @@ fun AppDetailsScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        when (val state = uiState) {
+            is AppDetailsUiState.Loading -> {
                 Box(
                     modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                        .fillMaxSize()
+                        .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(id = viewModel.app.iconRes),
-                        contentDescription = viewModel.app.name,
-                        modifier = Modifier.size(64.dp)
+                    CircularProgressIndicator()
+                }
+            }
+
+            is AppDetailsUiState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = state.message,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Button(onClick = { viewModel.loadApp() }) {
+                            Text("Повторить")
+                        }
+                    }
+                }
+            }
+
+            is AppDetailsUiState.Success -> {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = state.app.iconUrl,
+                                contentDescription = state.app.name,
+                                placeholder = painterResource(id = R.drawable.ic_launcher_foreground),
+                                error = painterResource(id = R.drawable.ic_launcher_foreground),
+                                modifier = Modifier.size(64.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column {
+                            Text(text = state.app.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = state.app.category,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Button(
+                        onClick = {},
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Установить")
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(text = "Описание", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = state.app.description,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
 
-                Column {
-                    Text(text = viewModel.app.name, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    Text(text = viewModel.app.category, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
+                    ShowcaseBlock(allApps = state.showcaseApps, onAppClick = onSimilarAppClick)
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Button(
-                onClick = {},
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Установить")
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(text = "Описание", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(text = viewModel.app.description, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            ShowcaseBlock(allApps = viewModel.showcaseApps, onAppClick = onSimilarAppClick)
         }
     }
 }
 
 @Composable
-fun ShowcaseBlock(allApps: List<AppDomainModel>, onAppClick: (Int) -> Unit) {
+fun ShowcaseBlock(allApps: List<AppDomainModel>, onAppClick: (String) -> Unit) {
     Text(
         text = "Витрина",
         fontSize = 20.sp,
@@ -275,6 +363,7 @@ fun ShowcaseBlock(allApps: List<AppDomainModel>, onAppClick: (Int) -> Unit) {
         modifier = Modifier.padding(bottom = 12.dp)
     )
 
+    // Фиксированно 3 страницы по 3 приложения (как в ДЗ 4.2)
     val pageCount = 3
     val pagerState = rememberPagerState(pageCount = { pageCount })
 
@@ -321,9 +410,12 @@ fun AppListItem(app: AppDomainModel, onClick: () -> Unit = {}) {
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
-                Image(
-                    painter = painterResource(id = app.iconRes),
+                // Картинка грузится по URL из серверных данных
+                AsyncImage(
+                    model = app.iconUrl,
                     contentDescription = app.name,
+                    placeholder = painterResource(id = R.drawable.ic_launcher_foreground),
+                    error = painterResource(id = R.drawable.ic_launcher_foreground),
                     modifier = Modifier.size(36.dp)
                 )
             }

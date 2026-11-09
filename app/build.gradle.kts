@@ -62,4 +62,12 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
+
+    // Сеть (Retrofit + Gson + логирование запросов)
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.okhttp.logging.interceptor)
+
+    // Загрузка изображений по URL (Coil)
+    implementation(libs.coil.compose)
 }
