@@ -28,10 +28,16 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -50,6 +56,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,6 +76,7 @@ import ru.grigorev.vkeducationprj.presentation.AppDetailsViewModel
 import ru.grigorev.vkeducationprj.presentation.AppListUiState
 import ru.grigorev.vkeducationprj.presentation.AppListViewModel
 import ru.grigorev.vkeducationprj.presentation.AppUiEvent
+import ru.grigorev.vkeducationprj.presentation.InstallState
 import ru.grigorev.vkeducationprj.ui.theme.VKEducationPrjTheme
 
 @AndroidEntryPoint
@@ -209,15 +217,66 @@ fun AppListScreen(
             }
 
             is AppListUiState.Success -> {
-                LazyColumn(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .padding(paddingValues)
                 ) {
-                    items(state.apps) { app ->
-                        AppListItem(app = app, onClick = { onAppClick(app.id) })
+                    // ДЗ 9, задание 2: два способа загрузки рейтингов.
+                    // Время каждого способа замеряется в ViewModel и приходит в Snackbar.
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        FilledTonalButton(
+                            onClick = { viewModel.loadRatingsSequentially() },
+                            enabled = !state.ratingsLoading,
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.List,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Последовательно", fontSize = 12.sp)
+                        }
+                        FilledTonalButton(
+                            onClick = { viewModel.loadRatingsInParallel() },
+                            enabled = !state.ratingsLoading,
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Параллельно", fontSize = 12.sp)
+                        }
+                        if (state.ratingsLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(state.apps) { app ->
+                            AppListItem(
+                                app = app,
+                                rating = state.ratings[app.id],
+                                onClick = { onAppClick(app.id) }
+                            )
+                        }
                     }
                 }
             }
@@ -327,12 +386,50 @@ fun AppDetailsScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // ДЗ 9, задание 1: кнопка с двумя состояниями «Установить»/«Отменить».
+                    // Пока идёт эмулированная установка — показывается прогресс.
+                    val installState = state.installState
+
                     Button(
-                        onClick = {},
+                        onClick = { viewModel.onInstallClick() },
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = if (installState is InstallState.Installing) {
+                            ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error
+                            )
+                        } else {
+                            ButtonDefaults.buttonColors()
+                        }
                     ) {
-                        Text("Установить")
+                        Text(
+                            if (installState is InstallState.Installing) "Отменить" else "Установить"
+                        )
+                    }
+
+                    when (installState) {
+                        is InstallState.Installing -> {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = { installState.progress / 100f },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Установка… ${installState.progress}%",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        InstallState.Installed -> {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Установлено",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        InstallState.NotInstalled -> Unit
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
@@ -387,7 +484,12 @@ fun ShowcaseBlock(allApps: List<AppDomainModel>, onAppClick: (String) -> Unit) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppListItem(app: AppDomainModel, onClick: () -> Unit = {}) {
+fun AppListItem(
+    app: AppDomainModel,
+    // ДЗ 9, задание 2: рейтинг приложения (null — рейтинг ещё не загружен).
+    rating: Float? = null,
+    onClick: () -> Unit = {}
+) {
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
@@ -442,6 +544,26 @@ fun AppListItem(app: AppDomainModel, onClick: () -> Unit = {}) {
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+            }
+
+            // ДЗ 9, задание 2: звёздочка с рейтингом рядом с приложением.
+            rating?.let { value ->
+                Spacer(modifier = Modifier.width(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Рейтинг",
+                        tint = Color(0xFFFFC107),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = value.toString(),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 2.dp)
+                    )
+                }
             }
         }
     }

@@ -1,5 +1,8 @@
 package ru.grigorev.vkeducationprj.data.repository
 
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import ru.grigorev.vkeducationprj.data.model.AppMapper
 import ru.grigorev.vkeducationprj.data.network.CatalogApi
 import ru.grigorev.vkeducationprj.domain.model.AppDetailsDomainModel
@@ -34,5 +37,26 @@ class AppRepositoryImpl @Inject constructor(
     // но в интерфейс пользователя пока не интегрирован.
     override suspend fun getAppDetails(id: String): AppDetailsDomainModel {
         return mapper.mapDetails(api.getAppDetails(id))
+    }
+
+    // ДЗ 9, задание 2: ПОСЛЕДОВАТЕЛЬНАЯ загрузка рейтингов.
+    // Каждый следующий запрос стартует только после завершения предыдущего,
+    // поэтому суммарное время = N * 1500 мс (N — число приложений).
+    override suspend fun loadRatingsSequentially(ids: List<String>): Map<String, Float> {
+        val ratings = mutableMapOf<String, Float>()
+        for (id in ids) {
+            ratings[id] = api.getRating(id)
+        }
+        return ratings
+    }
+
+    // ДЗ 9, задание 2: ПАРАЛЛЕЛЬНАЯ загрузка без ограничений.
+    // Все запросы запускаются одновременно: для каждого id создаётся async-корутина,
+    // awaitAll() дожидается всех результатов внутри coroutineScope.
+    // Суммарное время ≈ самому медленному запросу (~1500 мс), независимо от N.
+    override suspend fun loadRatingsInParallel(ids: List<String>): Map<String, Float> = coroutineScope {
+        ids.map { id -> async { id to api.getRating(id) } }
+            .awaitAll()
+            .toMap()
     }
 }
