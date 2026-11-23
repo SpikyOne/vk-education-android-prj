@@ -12,7 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ru.grigorev.vkeducationprj.domain.model.AppDomainModel
-import ru.grigorev.vkeducationprj.domain.repository.AppRepository
+import ru.grigorev.vkeducationprj.domain.usecase.GetAppByIdUseCase
+import ru.grigorev.vkeducationprj.domain.usecase.GetAppsUseCase
 import javax.inject.Inject
 
 sealed interface AppDetailsUiState {
@@ -29,7 +30,8 @@ sealed interface AppDetailsUiState {
 @HiltViewModel
 class AppDetailsViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val repository: AppRepository
+    private val getAppByIdUseCase: GetAppByIdUseCase,
+    private val getAppsUseCase: GetAppsUseCase
 ) : ViewModel() {
 
     // appId приходит из маршрута навигации app_details/{appId}
@@ -51,9 +53,9 @@ class AppDetailsViewModel @Inject constructor(
             _uiState.value = try {
                 // getAppById и getApps берут каталог из кэша репозитория,
                 // поэтому лишнего запроса в сеть не будет
-                val app = repository.getAppById(appId)
+                val app = getAppByIdUseCase(appId)
                     ?: throw IllegalStateException("Приложение с id=$appId не найдено")
-                AppDetailsUiState.Success(app, repository.getApps())
+                AppDetailsUiState.Success(app, getAppsUseCase())
             } catch (e: Exception) {
                 AppDetailsUiState.Error(e.message ?: "Не удалось загрузить данные")
             }

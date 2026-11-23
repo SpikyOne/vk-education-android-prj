@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import ru.grigorev.vkeducationprj.domain.model.AppDomainModel
-import ru.grigorev.vkeducationprj.domain.repository.AppRepository
+import ru.grigorev.vkeducationprj.domain.usecase.GetAppsUseCase
+import ru.grigorev.vkeducationprj.domain.usecase.LoadRatingsInParallelUseCase
+import ru.grigorev.vkeducationprj.domain.usecase.LoadRatingsSequentiallyUseCase
 import javax.inject.Inject
 import kotlin.system.measureTimeMillis
 
@@ -35,10 +37,13 @@ sealed interface AppUiEvent {
     data class ShowSnackbar(val message: String) : AppUiEvent
 }
 
-// ViewModel получает AppRepository (интерфейс), а Hilt подставляет AppRepositoryImpl.
+// ViewModel получает юзкейсы (доменный слой), Hilt подставляет их зависимости.
+// Юзкейсы скрывают репозиторий: presentation не знает о data-слое.
 @HiltViewModel
 class AppListViewModel @Inject constructor(
-    private val repository: AppRepository
+    private val getAppsUseCase: GetAppsUseCase,
+    private val loadRatingsSequentiallyUseCase: LoadRatingsSequentiallyUseCase,
+    private val loadRatingsInParallelUseCase: LoadRatingsInParallelUseCase
 ) : ViewModel() {
 
     // Для замера берём первые 10 приложений: в каталоге с сервера 41 элемент,
@@ -62,7 +67,7 @@ class AppListViewModel @Inject constructor(
         _uiState.value = AppListUiState.Loading
         viewModelScope.launch {
             _uiState.value = try {
-                AppListUiState.Success(repository.getApps())
+                AppListUiState.Success(getAppsUseCase())
             } catch (e: Exception) {
                 AppListUiState.Error(e.message ?: "Не удалось загрузить каталог")
             }
@@ -76,12 +81,12 @@ class AppListViewModel @Inject constructor(
     // ДЗ 9, задание 2: последовательная загрузка — каждый рейтинг запрашивается
     // только после предыдущего. Время замеряется через measureTimeMillis.
     fun loadRatingsSequentially() {
-        loadRatings("Последовательно") { ids -> repository.loadRatingsSequentially(ids) }
+        loadRatings("Последовательно") { ids -> loadRatingsSequentiallyUseCase(ids) }
     }
 
     // ДЗ 9, задание 2: параллельная загрузка — все запросы одновременно (async + awaitAll).
     fun loadRatingsInParallel() {
-        loadRatings("Параллельно") { ids -> repository.loadRatingsInParallel(ids) }
+        loadRatings("Параллельно") { ids -> loadRatingsInParallelUseCase(ids) }
     }
 
     private fun loadRatings(

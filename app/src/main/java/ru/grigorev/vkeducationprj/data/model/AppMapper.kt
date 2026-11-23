@@ -29,4 +29,30 @@ class AppMapper {
             description = dto.description
         )
     }
+
+    // Обратные преобразования Domain -> DTO (ДЗ 10: мапперы в обе стороны —
+    // пригодятся, когда появится отправка данных на сервер).
+    fun mapToDto(domain: AppDomainModel): AppDto {
+        return AppDto(
+            id = domain.id,
+            name = domain.name,
+            category = domain.category,
+            description = domain.description,
+            iconUrl = domain.iconUrl
+        )
+    }
+
+    fun mapDetailsToDto(domain: AppDetailsDomainModel): AppDetailsDto {
+        return AppDetailsDto(
+            id = domain.id,
+            name = domain.name,
+            developer = domain.developer,
+            category = domain.category,
+            ageRating = domain.ageRating,
+            size = domain.size,
+            iconUrl = domain.iconUrl,
+            screenshotUrlList = domain.screenshotUrlList,
+            description = domain.description
+        )
+    }
 }
